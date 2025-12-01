@@ -6,11 +6,12 @@ AudioIn in;
 
 int windowWidth = 500;
 int windowHeight = 500;
-int measureVertSpacing = 50;
+int measureVertSpacing = 150;
 
 float pitch;
 float lastNote = 0;
 float timeBetweenNotes = 0;
+float noteStart = 0;
 float noteLength = 0;
 ArrayList<Float> pitchArray = new ArrayList<Float>(); //array of pitches recorded from when a note is detected to when it stops being detected 
 float averagePitch = 0;
@@ -24,9 +25,13 @@ FloatDict notePitchesDict;
 //StringDict noteNamesDict;
 
 //these need to be declared here I guess or there's an error
-float total = 0;
+float total = 0f;
 float max = 0f;
 float min = 0f;
+
+float beatLength = 200f; //beat length in milliseconds
+
+int noteNum = 0;
 
 void settings(){
   size(windowWidth, windowHeight); 
@@ -49,31 +54,53 @@ void draw() {
   fill(0,0,0);
   pitch = pitchDetector.analyze();
   //println(pitch);
-  if (pitch > 0){
+  println("millis - lastNote: " + (millis() - lastNote));
+  if (pitch > 50){
     if (noteDrawn == true){
       noteDrawn = false;
+      noteStart = millis();
     }
     timeBetweenNotes = millis() - lastNote;
-    lastNote = millis();
+    if (millis() - noteStart > 70){
+      lastNote = millis();
+    }
     pitchArray.add(pitch);
-  } else if (noteDrawn == false && lastNote != 0) { //if there's no longer a pitch being detected (and we haven't drawn a note since the last note?)
-    println("before removing outliers:");
-    printArray(pitchArray);
-    removeOutliers(pitchArray);
-    println("after removing outliers");
-    printArray(pitchArray);
-    avg = getAverage(pitchArray);
-    println(avg);
-    println(50+millis()*0.02);
-    println();//
-    
-    float closestNote = getClosestVal(noteValues, avg);
-    println(closestNote);
-    
-    circle((50+(millis()*0.02)%(windowWidth-50)), (windowHeight-(windowHeight/5 + closestNote*0.5) + measureVertSpacing*floor((50 + (millis()*0.02))/windowWidth)), 10);//timeBetweenNotes 
-    //rect(50+(millis()*0.02), (500-(avg*0.5)), timeBetweenNotes, 10);
-    noteDrawn = true;
-    pitchArray.clear();
+  } else if (noteDrawn == false && lastNote != 0) { //if there's no longer a pitch being detected (and we haven't drawn a note since the last note?) //timeBetweenNotes > 30 && 
+    noteLength = millis() - noteStart;
+    println("noteLength: " + noteLength);
+    println("time between notes: " + timeBetweenNotes); //why is this so low? A: I think because the "ghost notes" that I'm filtering out by the following line are not being filtered out in the first if case so are still counting as notes for "lastNote"
+    if (noteLength > 70) {
+      println("before removing outliers:");
+      printArray(pitchArray);
+      removeOutliers(pitchArray);
+      println("after removing outliers");
+      printArray(pitchArray);
+      avg = getAverage(pitchArray);
+      println(avg);
+      //println(50+millis()*0.02);
+      println();//
+      
+      float closestNote = getClosestVal(noteValues, avg);
+      println(closestNote);
+      
+      circle((50+(20*noteNum)%(windowWidth-50)), (windowHeight-(windowHeight/2 + closestNote*0.5) + measureVertSpacing*floor((50 + (noteNum*20))/windowWidth)), 10);//timeBetweenNotes 
+  
+      
+      println(noteLength + "ms");
+      if (noteLength > beatLength*2 && noteLength < beatLength*30){
+        fill(255,255,255);
+        circle((50+(20*noteNum)%(windowWidth-50)), (windowHeight-(windowHeight/2 + closestNote*0.5) + measureVertSpacing*floor((50 + (noteNum*20))/windowWidth)), 8);
+        fill(0,0,0);
+      }
+      noteNum++;
+      
+      //rect(50+(millis()*0.02), (500-(avg*0.5)), timeBetweenNotes, 10);
+      noteDrawn = true;
+      pitchArray.clear();
+    }
+  } else {
+    circle((50+(20*noteNum)%(windowWidth-50)), (windowHeight-(windowHeight/2) + measureVertSpacing*floor((50 + (noteNum*20))/windowWidth)), 5);
+    noteNum = int(floor(millis()/beatLength));
   }
   
   
